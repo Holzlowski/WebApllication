@@ -2,7 +2,7 @@
 
 # Elixir
 
-## Section
+## Beispiele
 
 ```elixir
 [a, a] = [1, 1]
@@ -12,3 +12,28 @@
 a = 1
 1 = a
 ```
+
+## 1. Vorlesung
+
+```elixir
+defmodule Li do
+  def len(list) do
+    if list == [] do
+      0
+    else
+      [h | t] = list
+      1 + len(t)
+    end
+  end
+end
+
+list = [1, 2, 3, 4, 5]
+
+Li.len(list)
+```
+
+[h | t]
+
+h = erste Element in der Liste
+
+t = Rest der Liste
