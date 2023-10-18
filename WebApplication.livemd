@@ -1,0 +1,14 @@
+<!-- livebook:{"app_settings":{"slug":"HolzWebApplication"}} -->
+
+# Elixir
+
+## Section
+
+```elixir
+[a, a] = [1, 1]
+```
+
+```elixir
+a = 1
+1 = a
+```
