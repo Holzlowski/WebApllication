@@ -15,6 +15,10 @@ a = 1
 
 ## 1. Vorlesung
 
+<h3>
+Funktion, um Länge einer Liste zu berechnen
+</h3>
+
 ```elixir
 defmodule Li do
   def len(list) do
@@ -37,3 +41,153 @@ Li.len(list)
 h = erste Element in der Liste
 
 t = Rest der Liste
+
+<!-- livebook:{"break_markdown":true} -->
+
+---
+
+<!-- livebook:{"break_markdown":true} -->
+
+<h3>
+Funktion zur Berechnung der Länge einer Liste mit Tail-Recursion
+</h3>
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule Li2 do
+  def len(list) do
+    tail_len(list, 0)
+  end
+
+  defp tail_len(current, acc) do
+    if current == [] do
+      acc
+    else
+      [h | t] = current
+      tail_len(t, acc + 1)
+    end
+  end
+end
+
+Li2.len(list)
+```
+
+<h3>
+Funktion, um durch Liste zu gehen und bei gewissen Wert zu stoppen.
+</h3>
+
+```elixir
+defmodule Li3 do
+  def tw(list, p) do
+    tail_tw(list, p, [])
+  end
+
+  defp tail_tw([], _p, acc) do
+    acc
+  end
+
+  defp tail_tw([h | t], p, acc) do
+    if p.(h) do
+      tail_tw(t, p, acc ++ [h])
+    else
+      acc
+    end
+  end
+end
+
+Li3.tw(list, fn x -> x <= 3 end)
+```
+
+<h3>
+Funktionen um n Elemente eine Liste zu nehmen oder aus der Liste rauszuschmeißen
+</h3>
+
+```elixir
+defmodule Li4 do
+  def take(list, i) do
+    tail_take(list, i, [])
+  end
+
+  defp tail_take(_, 0, acc) do
+    acc
+  end
+
+  defp tail_take([h | t], n, acc) do
+    tail_take(t, n - 1, acc ++ [h])
+  end
+
+  def drop(list, i) do
+    tail_drop(list, i)
+  end
+
+  defp tail_drop(list, 0) do
+    list
+  end
+
+  defp tail_drop([h | t], n) do
+    tail_drop(t, n - 1)
+  end
+end
+
+Li4.take(list, 2)
+Li4.drop(list, 3)
+```
+
+<h3>
+Funktion, die Elemente aus Liste entfernt, bis Bedingung erfüllt ist.
+</h3>
+
+```elixir
+defmodule Li5 do
+  def drop_while(list, p) do
+    tail_drop_while(list, p)
+  end
+
+  defp tail_drop_while([], p) do
+    []
+  end
+
+  defp tail_drop_while([h | t], p) do
+    if p.(h) do
+      tail_drop_while(t, p)
+    else
+      [h | t]
+    end
+  end
+end
+
+list = [2, 4, 1, 5, 10, 6]
+
+Li5.drop_while(list, fn x -> x <= 4 end)
+```
+
+<h3>
+Funktion, um List zu reversen
+</h3>
+
+```elixir
+defmodule Li6 do
+  def reverse_list(list) do
+    tail_reverse_list(list, [])
+  end
+
+  defp tail_reverse_list([], acc) do
+    acc
+  end
+
+  defp tail_reverse_list([h | t], acc) do
+    tail_reverse_list(t, [h | acc])
+  end
+end
+
+Li6.reverse_list(list)
+```
+
+<h3>
+Beispiel für Pipes
+</h3>
+
+```elixir
+list |> Li4.take(3) |> Li6.reverse_list()
+```
