@@ -31,7 +31,7 @@ defmodule Li do
   end
 end
 
-list = [1, 2, 3, 4, 5]
+list = [1, 2, 3, 4, 5, 2]
 
 Li.len(list)
 ```
@@ -96,7 +96,9 @@ defmodule Li3 do
   end
 end
 
-Li3.tw(list, fn x -> x <= 3 end)
+list2 = [1, 2, 3, 4, 5, 2]
+
+Li3.tw(list2, fn x -> x <= 3 end)
 ```
 
 <h3>
@@ -157,7 +159,7 @@ defmodule Li5 do
   end
 end
 
-list = [2, 4, 1, 5, 10, 6]
+list = [2, 4, 1, 5, 10, 6, 4]
 
 Li5.drop_while(list, fn x -> x <= 4 end)
 ```
@@ -190,4 +192,309 @@ Beispiel für Pipes
 
 ```elixir
 list |> Li4.take(3) |> Li6.reverse_list()
+```
+
+---
+
+## 2. Vorlesung
+
+<h3>
+Pipe Semantic bedeutet das gleiche wie:
+</h3>
+
+```elixir
+list = [1, 2, 3, 4]
+l2 = ["a", "b", "c"]
+
+list |> Enum.zip(l2)
+
+# das gleiche wie
+
+Enum.zip(list, l2)
+```
+
+<h3>
+Aufgabe Folie 14
+</h3>
+
+```elixir
+# Alle geraden Elemente in Liste werden neue Liste
+defmodule Task14 do
+  def all_even(list) do
+    tail_all_even(list, [])
+  end
+
+  defp tail_all_even([], acc) do
+    acc
+  end
+
+  defp tail_all_even([h | t], acc) do
+    if rem(h, 2) == 0 do
+      tail_all_even(t, acc ++ [h])
+    else
+      tail_all_even(t, acc)
+    end
+  end
+end
+
+list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+Task14.all_even(list)
+```
+
+```elixir
+# Alle Elemente die kleiner sind als 42, werden eine neue Liste
+defmodule Task15 do
+  def all_large(list) do
+    tail_all_large(list, [])
+  end
+
+  defp tail_all_large([], acc) do
+    acc
+  end
+
+  defp tail_all_large([h | t], acc) do
+    if h < 42 do
+      tail_all_large(t, acc ++ [h])
+    else
+      tail_all_large(t, acc)
+    end
+  end
+end
+
+list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 55, 66, 77, 88]
+
+x = Task15.all_large(list)
+
+IO.inspect(x, charlists: :as_lists)
+```
+
+<h3>
+Filter
+</h3>
+
+```elixir
+defmodule Task16 do
+  def all_large(list) do
+    filter(list, fn x -> x > 42 end)
+  end
+
+  def filter(list, predicate) do
+    tail_filter(list, predicate, [])
+  end
+
+  defp tail_filter([], _, acc) do
+    acc
+  end
+
+  defp tail_filter([h | t], predicate, acc) do
+    if predicate.(h) do
+      tail_filter(t, predicate, acc ++ [h])
+    else
+      tail_filter(t, predicate, acc)
+    end
+  end
+end
+
+list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 55, 66, 77, 88]
+
+x = Task16.all_large(list)
+
+IO.inspect(x, charlists: :as_lists)
+```
+
+<h3>
+Mehrere Pipes aneinander reihen
+</h3>
+
+```elixir
+x =
+  1..10
+  |> Enum.to_list()
+  |> Enum.filter(fn n -> n < 5 end)
+```
+
+<h3>
+Map und Filter
+</h3>
+
+```elixir
+defmodule Filter do
+  def all_large(list) do
+    filter(list, fn x -> x > 42 end)
+  end
+
+  def filter(list, predicate) do
+    tail_filter(list, predicate, [])
+  end
+
+  defp tail_filter([], _, acc) do
+    acc
+  end
+
+  defp tail_filter([h | t], predicate, acc) do
+    if predicate.(h) do
+      tail_filter(t, predicate, acc ++ [h])
+    else
+      tail_filter(t, predicate, acc)
+    end
+  end
+end
+
+# Modul Name Map kann nicht genutzt werden
+defmodule Map1 do
+  def map(list, f) do
+    tail_map(list, f, [])
+  end
+
+  defp tail_map([], _, acc) do
+    acc
+  end
+
+  defp tail_map([h | t], f, acc) do
+    tail_map(t, f, acc ++ [f.(h)])
+  end
+end
+
+list = [1, 2, 3, 4, 5, 6]
+
+# [1, 3, 5]
+list
+|> Filter.filter(fn n -> rem(n, 2) == 1 end)
+# [2, 6, 10]
+|> Map1.map(fn n -> 2 * n end)
+```
+
+<h3>
+Comprehensions
+</h3>
+
+```elixir
+# <- zeigt an, dass n den Wert aus der Range (Bereich) 1..10 erhält.
+for n <- 1..10, rem(n, 2) == 0 do
+  n * n
+end
+
+# ist dasselbe wie
+squared_even_numbers =
+  1..10
+  |> Enum.filter(fn n -> rem(n, 2) == 0 end)
+  |> Enum.map(fn n -> n * n end)
+```
+
+```elixir
+# ohne das letzte , von den Folien
+for n <- 1..10, rem(n, 2) == 0, into: MapSet.new() do
+  n * n
+end
+```
+
+```elixir
+# andere Syntax geht auch
+1..10 |> Enum.filter(fn n -> rem(n, 2) == 0 end) |> Enum.map(fn n -> n * n end)
+```
+
+```elixir
+for n <- 1..10, into: MapSet.new() do
+  rem(n, 2)
+end
+```
+
+```elixir
+for x <- 1..20,
+    y <- 9..11,
+    z <- 155..161,
+    x * y == z do
+  IO.inspect({x, y, z})
+end
+```
+
+```elixir
+for a <- 1..333,
+    b <- (a + 1)..666,
+    c = 1000 - a - b,
+    a * a + b * b == c * c do
+  IO.inspect({a, b, c})
+end
+```
+
+<h3>
+Reduce
+</h3>
+
+```elixir
+defmodule Reduce do
+  def sum(list) do
+    # tail_sum(list, 0)
+    reduce(list, 0, fn h, acc -> acc + h end)
+  end
+
+  # defp tail_sum([], acc) do acc end
+  # defp tail_sum([h|t], acc) do
+  #  tail_sum(t, acc+h)
+  # end
+
+  def to_set(list) do
+    # tail_to_set(list, MapSet.new())
+    reduce(list, MapSet.new(), fn h, acc -> MapSet.put(acc, h) end)
+  end
+
+  # defp tail_to_set([], acc) do acc end
+  # defp tail_to_set([h|t], acc) do
+  #  tail_to_set(t, MapSet.put(acc, h))
+  # end
+
+  def reduce(list, default, f) do
+    tail_reduce(list, default, f)
+  end
+
+  defp tail_reduce([], acc, _) do
+    acc
+  end
+
+  defp tail_reduce([h | t], acc, f) do
+    tail_reduce(t, f.(h, acc), f)
+  end
+
+  def map_by_reduce(list, f) do
+    reduce(list, [], fn h, acc -> acc ++ [f.(h)] end)
+  end
+end
+
+list = [1, 2, 3, 4, 5, 6, 1, 2, 3]
+
+# list |> Reduce.sum()
+# list |> Reduce.to_set()
+list |> Reduce.map_by_reduce(fn x -> x + 1 end)
+# list |> Reduce.map_by_reduce(fn x -> rem(x, 3) end)
+```
+
+<h3>
+Eager and Lazy Evaluation
+</h3>
+
+```elixir
+a = 1..10 |> Enum.to_list()
+a |> Enum.map(fn n -> IO.inspect(n) end) |> Enum.take(2)
+```
+
+```elixir
+a = 1..10 |> Enum.to_list()
+a |> Stream.map(fn x -> IO.inspect(x) end)
+```
+
+```elixir
+a = 1..10 |> Enum.to_list()
+a |> Stream.map(fn x -> IO.inspect(x) end) |> Enum.take(2)
+```
+
+```elixir
+Stream.iterate(0, fn n -> n + 1 end) |> Enum.take(10)
+```
+
+```elixir
+l1 = ["a", "b", "c"]
+nat = Stream.iterate(1, fn n -> n + 1 end)
+
+l1 |> Enum.zip(nat)
 ```
