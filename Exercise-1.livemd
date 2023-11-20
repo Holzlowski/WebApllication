@@ -1,0 +1,91 @@
+# Exercise 1
+
+## 1-1 & 1-2
+
+```elixir
+defmodule Fibonacci do
+  def sum_even_fibonacci(limit) do
+    tail_sum_even_fibonacci(1, 2, 0, limit)
+  end
+
+  defp tail_sum_even_fibonacci(a, b, acc, limit) when a > limit do
+    acc
+  end
+
+  defp tail_sum_even_fibonacci(a, b, acc, limit) do
+    new_acc = if rem(a, 2) == 0, do: acc + a, else: acc
+    tail_sum_even_fibonacci(b, a + b, new_acc, limit)
+  end
+
+  def find_largest_palindrome do
+    max_palindrome =
+      for a <- 999..100, b <- 999..100, is_palindrome?(a * b) do
+        a * b
+      end
+      |> Enum.max()
+
+    max_palindrome
+  end
+
+  defp is_palindrome?(n) do
+    Integer.to_string(n) == Integer.to_string(n) |> String.reverse()
+  end
+end
+
+# Beispielaufruf mit einer Grenze von 4 Millionen
+limit = 4_000_000
+result = Fibonacci.sum_even_fibonacci(limit)
+result2 = Fibonacci.find_largest_palindrome()
+
+IO.puts("Sum of even Fibonacci numbers below #{limit}: #{result}")
+IO.puts("Größtes Palindrom aus dem Produkt zweier zweistelliger Zahlen: #{result2}")
+```
+
+## 1-4 & 1-5
+
+```elixir
+defmodule Diceware do
+  def get_map(file_name) do
+    {:ok, file} = File.read(file_name)
+    # create a new map
+    result_map = %{}
+
+    # create a map with key = first word of the line and value = second word of the line
+    file
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(fn line -> String.split(line, " ") end)
+    |> Enum.reduce(result_map, fn [key, value], acc -> Map.put(acc, key, value) end)
+  end
+
+  def gen_password(map, number_of_keys) do
+    number_of_keys = abs(number_of_keys)
+
+    random_numbers_list =
+      Enum.map(1..number_of_keys, fn _ ->
+        Enum.join(Enum.map(1..5, fn _ -> Integer.to_string(Enum.random(1..6)) end), "")
+      end)
+
+    IO.inspect(random_numbers_list, label: "Generated Keys:")
+
+    # existing_keys = Map.keys(map)
+    # IO.inspect(existing_keys, label: "Existing Keys in Map:")
+
+    values_list =
+      Enum.map(random_numbers_list, fn key ->
+        value = Map.get(map, key, "Not found")
+        IO.inspect(value, label: "Value for key #{key}:")
+      end)
+
+    Enum.join(values_list, "")
+  end
+end
+
+file_path = "/Users/dav00731/Desktop/Uni/WebApllication/diceware_german.txt"
+result_map = Diceware.get_map(file_path)
+# IO.inspect(result_map)
+
+number_of_keys = -5
+password = Diceware.gen_password(result_map, number_of_keys)
+IO.inspect(password)
+```
