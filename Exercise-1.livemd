@@ -41,6 +41,57 @@ IO.puts("Sum of even Fibonacci numbers below #{limit}: #{result}")
 IO.puts("Größtes Palindrom aus dem Produkt zweier zweistelliger Zahlen: #{result2}")
 ```
 
+## 1-3
+
+```elixir
+defmodule CountAndSay do
+  def generate(n) do
+    generate_recursive(n, "1")
+  end
+
+  defp generate_recursive(1, acc) do
+    acc
+  end
+
+  defp generate_recursive(n, acc) do
+    new_seq = calculate(acc)
+    generate_recursive(n - 1, new_seq)
+  end
+
+  defp calculate(input) do
+    # Die Eingabe in Grapheme-Cluster zerlegen, um sicherzustellen, dass
+    # jede Ziffer als einzelnes Zeichen behandelt wird.
+    calculate_recursive(String.graphemes(input), "", "", 0)
+  end
+
+  defp calculate_recursive([], result, last_digit, count) do
+    append(result, count, last_digit)
+  end
+
+  defp calculate_recursive([head | tail], result, last_digit, count) do
+    digit = head
+
+    if last_digit == "" or digit == last_digit do
+      calculate_recursive(tail, result, digit, count + 1)
+    else
+      new_result = append(result, count, last_digit)
+      calculate_recursive(tail, new_result, digit, 1)
+    end
+  end
+
+  defp append(result, count, digit) do
+    result <> "#{count}#{digit}"
+  end
+end
+
+IO.puts(CountAndSay.generate(2))
+IO.puts(CountAndSay.generate(4))
+IO.puts(CountAndSay.generate(5))
+IO.puts(CountAndSay.generate(6))
+IO.puts(CountAndSay.generate(9))
+IO.puts(CountAndSay.generate(10))
+```
+
 ## 1-4 & 1-5
 
 ```elixir
