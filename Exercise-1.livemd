@@ -98,10 +98,10 @@ IO.puts(CountAndSay.generate(10))
 defmodule Diceware do
   def get_map(file_name) do
     {:ok, file} = File.read(file_name)
-    # create a new map
+    # neue Map wird erstellt
     result_map = %{}
 
-    # create a map with key = first word of the line and value = second word of the line
+    # Map mit key = erste Wort der Zeile und value = zweite Wort der Zeile
     file
     |> String.trim()
     |> String.split("\n")
