@@ -139,3 +139,46 @@ number_of_keys = -5
 password = Diceware.gen_password(result_map, number_of_keys)
 IO.inspect(password)
 ```
+
+## Ergänzungen
+
+```elixir
+# defmodule E do
+#   fib() do
+#     |> Stream.filter(fn n -> rem(n,2) == 0 end)
+#     |> Stream.take_while(fn n -> n < 4000000 end) #Zhang hatte hier filter genutzt (das war dann eine ewige Schleife)
+#     |> Enum.sum()
+#   end
+# end
+
+defmodule Example do
+  # Lauflängen Codierung
+  def run_length(a) do
+    tail_run_length(a, [])
+  end
+
+  defp tail_run_length([], acc) do
+    acc
+  end
+
+  defp tail_run_length([h | t], acc) do
+    IO.puts("Input: #{[h | t]}")
+    next_run = [h | t] |> Enum.take_while(&(&1 == h))
+    rest = [h | t] |> Enum.drop_while(&(&1 == h))
+    new_acc = acc ++ [{length(next_run), h}]
+
+    # Konvertiere Tupel in Strings für die Ausgabe
+    next_run_str = Enum.map(next_run, &to_string/1)
+    new_acc_str = Enum.map(new_acc, &"{#{elem(&1, 0)}, #{elem(&1, 1)}}")
+
+    IO.puts(
+      "Input: #{[h | t]}, Next Run: #{next_run_str}, Rest: #{rest}, Accumulator: #{new_acc_str}"
+    )
+
+    tail_run_length(rest, new_acc)
+  end
+end
+
+input_list = [1, 1, 1, 2, 2, 3, 4, 4, 4, 4, 5]
+Example.run_length(input_list)
+```
