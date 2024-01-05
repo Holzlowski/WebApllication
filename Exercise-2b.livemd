@@ -1,0 +1,52 @@
+# Exercise 2b
+
+## Section
+
+```elixir
+defmodule TicTacTo do
+  use GenServer
+
+  def start(player1, player2) do
+    GenServer.start(__MODULE__, {player1, player2})
+  end
+
+  def showState(pid) do
+    GenServer.call(pid, {:showState})
+  end
+
+  def play(pid, currentPlayer, x, y) do
+    GenServer.call(pid, {:makeMove, currentPlayer, x, y})
+  end
+
+  # GenServer callbacks
+  def init({player1, player2}) do
+    initial_state = %{
+      board: ~w(- - - - - - - - -),
+      players: [player1, player2],
+      current_player: player1
+    }
+
+    {:ok, initial_state}
+  end
+
+  def handle_call({:showState}, _from, state) do
+    IO.inspect(state, label: "Current State in handle_call")
+    {:reply, state, state}
+  end
+
+  def handle_call({:makeMove, currentPlayer, x, y}, _from, state) do
+    index = x + y * 3
+    new_board = List.replace_at(state.board, index, currentPlayer)
+    new_state = %{state | board: new_board}
+    IO.inspect(state, label: "Current State in handle_call")
+    {:reply, new_state, new_state}
+  end
+end
+```
+
+```elixir
+{:ok, pid} = TicTacTo.start(:a, :b)
+TicTacTo.play(pid, :a, 1, 2)
+TicTacTo.play(pid, :b, 0, 2)
+TicTacTo.play(pid, :a, 2, 2)
+```
