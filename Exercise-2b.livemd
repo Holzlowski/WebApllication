@@ -49,4 +49,5 @@ end
 TicTacTo.play(pid, :a, 1, 2)
 TicTacTo.play(pid, :b, 0, 2)
 TicTacTo.play(pid, :a, 2, 2)
+TicTacTo.play(pid, :b, 2, 2)
 ```
