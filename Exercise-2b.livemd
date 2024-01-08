@@ -23,9 +23,14 @@ defmodule TicTacTo do
     initial_state = %{
       board: ~w(- - - - - - - - -),
       players: [player1, player2],
-      current_player: player1
+      current_player: player1,
+      turn: 0,
+      game_over: false,
+      # Initialisieren Sie den Gewinner mit :nil
+      winner: nil
     }
 
+    IO.inspect(initial_state, label: "Current State in handle_call")
     {:ok, initial_state}
   end
 
@@ -35,19 +40,119 @@ defmodule TicTacTo do
   end
 
   def handle_call({:makeMove, currentPlayer, x, y}, _from, state) do
-    index = x + y * 3
-    new_board = List.replace_at(state.board, index, currentPlayer)
-    new_state = %{state | board: new_board}
-    IO.inspect(state, label: "Current State in handle_call")
-    {:reply, new_state, new_state}
+    index = calculate_index(x, y)
+
+    case {currentPlayer, state.current_player} do
+      {currentPlayer, _} when currentPlayer == state.current_player ->
+        case update_board(state, index, currentPlayer) do
+          {:ok, new_board} ->
+            new_state = %{
+              state
+              | board: new_board,
+                turn: state.turn + 1,
+                current_player: next_player(state)
+            }
+
+            IO.inspect(new_state, label: "Current State in handle_call")
+
+            case check_winner(new_state) do
+              true ->
+                winner_state = %{new_state | winner: currentPlayer}
+                IO.puts("#{currentPlayer} hat gewonnen!")
+                {:reply, {:winner, currentPlayer}, winner_state}
+
+              _ ->
+                {:reply, new_state, new_state}
+            end
+
+          {:error, message} ->
+            IO.puts("Fehler: #{message}")
+            {:reply, {:error, message}, state}
+        end
+
+      {^currentPlayer, _} ->
+        error_message =
+          "Das ist nicht der Zug von #{currentPlayer}. Es ist der Zug von #{state.current_player}"
+
+        IO.puts("Fehler: #{error_message}")
+        {:reply, {:error, error_message}, state}
+    end
+  end
+
+  defp calculate_index(x, y) when x in 0..2 and y in 0..2 do
+    x + y * 3
+  end
+
+  defp calculate_index(_, _) do
+    IO.puts("Ungültige Koordinaten. x und y müssen im Bereich von 0 bis 2 liegen.")
+    {:error, -1}
+  end
+
+  defp next_player(%{players: [player1, player2], current_player: current_player}) do
+    if current_player == player1, do: player2, else: player1
+  end
+
+  defp update_board(state, index, currentPlayer) do
+    case Enum.at(state.board, index) do
+      "-" ->
+        new_board = List.replace_at(state.board, index, "#{player_number(currentPlayer)}")
+        {:ok, new_board}
+
+      _ ->
+        {:error, "Feld bereits besetzt"}
+    end
+  end
+
+  defp check_winner(state) do
+    board = state.board
+
+    # Überprüfung der Reihen
+    rows = Enum.chunk_every(board, 3, 3, :discard)
+    winner_in_rows = Enum.any?(rows, &check_line_winner/1)
+
+    # Überprüfung der Spalten
+    columns = transpose(rows)
+    winner_in_columns = Enum.any?(columns, &check_line_winner/1)
+
+    # Überprüfung der Diagonalen
+    # Indizes für die beiden Diagonalen
+    diagonals = [0, 1, 2]
+
+    winner_in_diagonals =
+      Enum.any?(diagonals, fn index -> check_diagonal_winner(index, board) end)
+
+    winner_in_rows || winner_in_columns || winner_in_diagonals
+  end
+
+  defp check_line_winner(line) do
+    line == ~w(1 1 1) or line == ~w(2 2 2)
+  end
+
+  defp check_diagonal_winner(index, board) do
+    diag = [Enum.at(board, index), Enum.at(board, index + 4), Enum.at(board, index + 8)]
+    diag == ~w(1 1 1) or diag == ~w(2 2 2)
+  end
+
+  defp transpose(matrix) do
+    Enum.reduce(0..2, [], fn col, acc ->
+      Enum.map(matrix, &Enum.at(&1, col)) ++ acc
+    end)
+  end
+
+  defp player_number(player) do
+    Map.get(%{:a => 1, :b => 2}, player, player)
   end
 end
 ```
 
 ```elixir
+# Spiel starten
 {:ok, pid} = TicTacTo.start(:a, :b)
-TicTacTo.play(pid, :a, 1, 2)
-TicTacTo.play(pid, :b, 0, 2)
-TicTacTo.play(pid, :a, 2, 2)
-TicTacTo.play(pid, :b, 2, 2)
+
+# Zug für Spieler :a
+TicTacTo.play(pid, :a, 0, 0)
+TicTacTo.play(pid, :b, 1, 0)
+TicTacTo.play(pid, :a, 0, 1)
+TicTacTo.play(pid, :b, 1, 1)
+TicTacTo.play(pid, :a, 0, 2)
 ```
