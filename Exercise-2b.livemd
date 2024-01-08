@@ -18,6 +18,10 @@ defmodule TicTacTo do
     GenServer.call(pid, {:makeMove, currentPlayer, x, y})
   end
 
+  def restart(pid, player1, player2) do
+    GenServer.cast(pid, {:restart, player1, player2})
+  end
+
   # GenServer callbacks
   def init({player1, player2}) do
     initial_state = %{
@@ -26,7 +30,6 @@ defmodule TicTacTo do
       current_player: player1,
       turn: 0,
       game_over: false,
-      # Initialisieren Sie den Gewinner mit :nil
       winner: nil
     }
 
@@ -35,48 +38,81 @@ defmodule TicTacTo do
   end
 
   def handle_call({:showState}, _from, state) do
-    IO.inspect(state, label: "Current State in handle_call")
+    IO.inspect(state, label: "Current State: ")
     {:reply, state, state}
+  end
+
+  def handle_cast({:restart, player1, player2}, state) do
+    initial_state = %{
+      board: ~w(- - - - - - - - -),
+      players: [player1, player2],
+      current_player: player1,
+      turn: 0,
+      game_over: false,
+      winner: nil
+    }
+
+    IO.inspect(initial_state, label: "Restarting Game")
+
+    {:noreply, initial_state}
   end
 
   def handle_call({:makeMove, currentPlayer, x, y}, _from, state) do
     index = calculate_index(x, y)
 
-    case {currentPlayer, state.current_player} do
-      {currentPlayer, _} when currentPlayer == state.current_player ->
-        case update_board(state, index, currentPlayer) do
-          {:ok, new_board} ->
-            new_state = %{
-              state
-              | board: new_board,
-                turn: state.turn + 1,
-                current_player: next_player(state)
-            }
+    if state.game_over do
+      error_message = "Das Spiel ist bereits beendet. Es kann kein Zug mehr gemacht werden."
+      IO.puts("Fehler: #{error_message}")
+      {:reply, {:error, error_message}, state}
+    else
+      case {currentPlayer, state.current_player} do
+        {currentPlayer, _} when currentPlayer == state.current_player ->
+          case update_board(state, index, currentPlayer) do
+            {:ok, updated_state} ->
+              case check_winner(updated_state) do
+                {:winner, winner_player, winner_state} ->
+                  {:reply, {:winner, winner_player}, winner_state}
 
-            IO.inspect(new_state, label: "Current State in handle_call")
+                _ ->
+                  new_state = %{
+                    updated_state
+                    | turn: updated_state.turn + 1,
+                      current_player: next_player(updated_state),
+                      game_over: false
+                  }
 
-            case check_winner(new_state) do
-              true ->
-                winner_state = %{new_state | winner: currentPlayer}
-                IO.puts("#{currentPlayer} hat gewonnen!")
-                {:reply, {:winner, currentPlayer}, winner_state}
+                  if full_board?(new_state.board) do
+                    draw_state = %{
+                      new_state
+                      | game_over: true,
+                        winner: "Unentschieden"
+                    }
 
-              _ ->
-                {:reply, new_state, new_state}
-            end
+                    IO.puts("Das Spiel endet unentschieden!")
+                    {:reply, {:draw, "Unentschieden"}, draw_state}
+                  else
+                    IO.inspect(new_state, label: "After update_board")
+                    {:reply, new_state, new_state}
+                  end
+              end
 
-          {:error, message} ->
-            IO.puts("Fehler: #{message}")
-            {:reply, {:error, message}, state}
-        end
+            {:error, message} ->
+              IO.puts("Fehler: #{message}")
+              {:reply, {:error, message}, state}
+          end
 
-      {^currentPlayer, _} ->
-        error_message =
-          "Das ist nicht der Zug von #{currentPlayer}. Es ist der Zug von #{state.current_player}"
+        {^currentPlayer, _} ->
+          error_message =
+            "Das ist nicht der Zug von #{currentPlayer}. Es ist der Zug von #{state.current_player}"
 
-        IO.puts("Fehler: #{error_message}")
-        {:reply, {:error, error_message}, state}
+          IO.puts("Fehler: #{error_message}")
+          {:reply, {:error, error_message}, state}
+      end
     end
+  end
+
+  defp full_board?(board) do
+    Enum.all?(board, fn cell -> cell != "-" end)
   end
 
   defp calculate_index(x, y) when x in 0..2 and y in 0..2 do
@@ -95,64 +131,135 @@ defmodule TicTacTo do
   defp update_board(state, index, currentPlayer) do
     case Enum.at(state.board, index) do
       "-" ->
-        new_board = List.replace_at(state.board, index, "#{player_number(currentPlayer)}")
-        {:ok, new_board}
+        player_number = player_number(currentPlayer, state)
+        new_board = List.replace_at(state.board, index, Integer.to_string(player_number))
+        updated_state = %{state | board: new_board}
+        {:ok, updated_state}
 
       _ ->
+        IO.inspect("Feld bereits besetzt", label: "Error")
         {:error, "Feld bereits besetzt"}
     end
   end
 
   defp check_winner(state) do
-    board = state.board
+    lines_to_check = [
+      # Horizontale Linien
+      {0, 1, 2},
+      {3, 4, 5},
+      {6, 7, 8},
+      # Vertikale Linien
+      {0, 3, 6},
+      {1, 4, 7},
+      {2, 5, 8},
+      # Diagonale Linien
+      {0, 4, 8},
+      {2, 4, 6}
+    ]
 
-    # Überprüfung der Reihen
-    rows = Enum.chunk_every(board, 3, 3, :discard)
-    winner_in_rows = Enum.any?(rows, &check_line_winner/1)
+    winner_state =
+      Enum.reduce_while(lines_to_check, {:ok, state}, fn {i, j, k}, acc ->
+        if Enum.all?([i, j, k], fn idx ->
+             Enum.at(state.board, idx) ==
+               Integer.to_string(player_number(state.current_player, state))
+           end) do
+          new_state = %{
+            state
+            | winner: state.current_player,
+              game_over: true
+          }
 
-    # Überprüfung der Spalten
-    columns = transpose(rows)
-    winner_in_columns = Enum.any?(columns, &check_line_winner/1)
+          IO.puts("#{state.current_player} hat gewonnen!")
+          {:halt, {:winner, state.current_player, new_state}}
+        else
+          {:cont, acc}
+        end
+      end)
 
-    # Überprüfung der Diagonalen
-    # Indizes für die beiden Diagonalen
-    diagonals = [0, 1, 2]
-
-    winner_in_diagonals =
-      Enum.any?(diagonals, fn index -> check_diagonal_winner(index, board) end)
-
-    winner_in_rows || winner_in_columns || winner_in_diagonals
+    case winner_state do
+      {:ok, _} -> {:ok, state}
+      result -> result
+    end
   end
 
-  defp check_line_winner(line) do
-    line == ~w(1 1 1) or line == ~w(2 2 2)
+  defp player_number(player, state) do
+    player_index = Enum.find_index(state.players, &(&1 == player))
+
+    case player_index do
+      0 -> 1
+      1 -> 2
+      _ -> raise "Unknown player: #{player}"
+    end
   end
 
-  defp check_diagonal_winner(index, board) do
-    diag = [Enum.at(board, index), Enum.at(board, index + 4), Enum.at(board, index + 8)]
-    diag == ~w(1 1 1) or diag == ~w(2 2 2)
+  defp init_state do
+    persistent_term_key = :tic_tac_to_state
+
+    case :persistent_term.get(persistent_term_key) do
+      {:ok, state} ->
+        IO.inspect(state, label: "Restoring State")
+        state
+
+      _ ->
+        initial_state = %{
+          board: ~w(- - - - - - - - -),
+          players: [nil, nil],
+          current_player: nil,
+          turn: 0,
+          game_over: false,
+          winner: nil
+        }
+
+        IO.inspect(initial_state, label: "Initial State")
+        :persistent_term.put(persistent_term_key, initial_state)
+        initial_state
+    end
   end
 
-  defp transpose(matrix) do
-    Enum.reduce(0..2, [], fn col, acc ->
-      Enum.map(matrix, &Enum.at(&1, col)) ++ acc
-    end)
+  defp store_state(state) do
+    :persistent_term.put(:tic_tac_to_state, state)
   end
+end
 
-  defp player_number(player) do
-    Map.get(%{:a => 1, :b => 2}, player, player)
+defmodule YourApplication do
+  use Application
+
+  def start(_type, _args) do
+    children = [
+      {TicTacToSupervisor, []}
+    ]
+
+    opts = [strategy: :one_for_one, name: YourApplication.Supervisor]
+    Supervisor.start_link(children, opts)
   end
 end
 ```
 
 ```elixir
 # Spiel starten
-{:ok, pid} = TicTacTo.start(:a, :b)
+{:ok, pid} = TicTacTo.start(:player1, :player2)
 
-# Zug für Spieler :a
+# Beispielzüge wo player1 gewinnt
+TicTacTo.play(pid, :player1, 0, 0)
+TicTacTo.play(pid, :player2, 1, 0)
+TicTacTo.play(pid, :player1, 0, 1)
+TicTacTo.play(pid, :player2, 1, 1)
+TicTacTo.play(pid, :player1, 0, 2)
+
+# Spieler :player2 versucht einen weiteren Zug, sollte einen Fehler geben
+TicTacTo.play(pid, :player2, 1, 2)
+
+# Resette das Spiel
+TicTacTo.restart(pid, :a, :b)
+
+# Unentschieden
 TicTacTo.play(pid, :a, 0, 0)
 TicTacTo.play(pid, :b, 1, 0)
-TicTacTo.play(pid, :a, 0, 1)
+TicTacTo.play(pid, :a, 2, 0)
 TicTacTo.play(pid, :b, 1, 1)
-TicTacTo.play(pid, :a, 0, 2)
+TicTacTo.play(pid, :a, 0, 1)
+TicTacTo.play(pid, :b, 0, 2)
+TicTacTo.play(pid, :a, 1, 2)
+TicTacTo.play(pid, :b, 2, 1)
+TicTacTo.play(pid, :a, 2, 2)
 ```
