@@ -1,0 +1,36 @@
+# Exercise 3
+
+## Section
+
+```elixir
+Mix.install([:floki, :httpoison])
+
+# Importiere das Modul HTTPoison.Response
+import HTTPoison.Response
+
+defmodule WebsiteGetter do
+  # Führe die HTTP-Anfrage durch
+  def make_request do
+    case HTTPoison.get("https://xkcd.com/archive/") do
+      {:ok, %HTTPoison.Response{status_code: 200, body: doc}} ->
+        handle_successful_request(doc)
+
+      {:error, reason} ->
+        IO.puts(reason)
+    end
+  end
+
+  defp handle_successful_request(doc) do
+    IO.puts("Erfolgreiche Anfrage! Statuscode: 200")
+    # IO.inspect doc
+    doc
+  end
+end
+
+tree = WebsiteGetter.make_request()
+comics = tree |> Floki.find("body") |> Floki.find(".box") |> Floki.find("a")
+
+# comic_count = tree |> Floki.find("body") |> Floki.find(".box") |> Floki.find("a") |> Enum.count()
+
+IO.puts("Die Anzahl an Comics auf der Webseite ist #{Enum.count(comics)}")
+```
